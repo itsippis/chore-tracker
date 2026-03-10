@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const CHORES = [
   { id: 1, name: "Dishes", icon: "🍽️", color: "#FF6B6B" },
@@ -12,20 +12,32 @@ const CHORES = [
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function getDaysInMonth(month, year) {
-  return new Date(year, month + 1, 0).getDate();
-}
-function getFirstDay(month, year) {
-  return new Date(year, month, 1).getDay();
+function getDaysInMonth(month, year) { return new Date(year, month + 1, 0).getDate(); }
+function getFirstDay(month, year) { return new Date(year, month, 1).getDay(); }
+
+function useLocalStorage(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : initialValue;
+    } catch { return initialValue; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch { console.warn("localStorage unavailable"); }
+  }, [key, value]);
+
+  return [value, setValue];
 }
 
 export default function ChoreTracker() {
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
-  const [completed, setCompleted] = useState({});
+  const [completed, setCompleted] = useLocalStorage("chore-completed", {});
+  const [activeChores, setActiveChores] = useLocalStorage("chore-active", [1, 4]);
   const [selectedDay, setSelectedDay] = useState(null);
-  const [activeChores, setActiveChores] = useState([1, 4]);
 
   const daysInMonth = getDaysInMonth(month, year);
   const firstDay = getFirstDay(month, year);
@@ -58,6 +70,15 @@ export default function ChoreTracker() {
     .reduce((a,b) => a+b, 0);
   const totalPossible = daysInMonth * activeChores.length;
 
+  const clearMonth = () => {
+    const prefix = `${year}-${month}-`;
+    setCompleted(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(k => { if (k.startsWith(prefix)) delete next[k]; });
+      return next;
+    });
+  };
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -71,25 +92,29 @@ export default function ChoreTracker() {
         * { box-sizing: border-box; }
         .day-cell { transition: all 0.2s ease; cursor: pointer; }
         .day-cell:hover { transform: scale(1.04); z-index: 10; }
-        .chore-dot { transition: all 0.15s; cursor: pointer; }
-        .chore-dot:hover { transform: scale(1.15); }
         .nav-btn { transition: all 0.2s; cursor: pointer; border: none; background: rgba(255,255,255,0.1); color: white; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; align-items: center; justify-content: center; }
         .nav-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.1); }
         .panel-slide { animation: slideIn 0.25s ease; }
         @keyframes slideIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
         .progress-fill { transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+        .clear-btn { transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,100,100,0.3); background: rgba(255,100,100,0.08); color: rgba(255,150,150,0.8); border-radius: 8px; padding: 5px 12px; font-size: 12px; font-family: 'DM Sans', sans-serif; }
+        .clear-btn:hover { background: rgba(255,100,100,0.2); border-color: rgba(255,100,100,0.6); color: #fff; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
       `}</style>
 
-      {/* Header */}
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ fontSize: 13, letterSpacing: 6, color: "#a78bfa", textTransform: "uppercase", marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>Monthly Planner</div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2rem, 5vw, 3.5rem)", fontWeight: 900, margin: 0, background: "linear-gradient(90deg, #fff, #a78bfa, #60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Chore Tracker
           </h1>
+          {/* Saved indicator */}
+          <div style={{ marginTop: 8, fontSize: 12, color: "rgba(167,139,250,0.6)", fontFamily: "'DM Sans', sans-serif", letterSpacing: 1 }}>
+            💾 Progress auto-saved to this browser
+          </div>
           {/* Progress bar */}
-          <div style={{ marginTop: 16, maxWidth: 400, margin: "16px auto 0" }}>
+          <div style={{ marginTop: 12, maxWidth: 400, margin: "12px auto 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#a78bfa", fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>
               <span>{totalDone} completed</span><span>{totalPossible - totalDone} remaining</span>
             </div>
@@ -109,8 +134,8 @@ export default function ChoreTracker() {
           <button className="nav-btn" onClick={nextMonth}>›</button>
         </div>
 
-        {/* Chore legend / toggle */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 28 }}>
+        {/* Chore toggles */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 16 }}>
           {CHORES.map(c => (
             <button key={c.id} onClick={() => setActiveChores(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 99, border: `2px solid ${activeChores.includes(c.id) ? c.color : "rgba(255,255,255,0.15)"}`, background: activeChores.includes(c.id) ? `${c.color}22` : "transparent", color: activeChores.includes(c.id) ? "#fff" : "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.2s" }}>
@@ -119,16 +144,19 @@ export default function ChoreTracker() {
           ))}
         </div>
 
+        {/* Clear month button */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+          <button className="clear-btn" onClick={clearMonth}>🗑 Clear {MONTHS[month]}</button>
+        </div>
+
         {/* Calendar grid */}
         <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 20, padding: "20px", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          {/* Day headers */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
             {DAYS.map(d => (
               <div key={d} style={{ textAlign: "center", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, color: "#a78bfa", letterSpacing: 2, padding: "4px 0", textTransform: "uppercase" }}>{d}</div>
             ))}
           </div>
 
-          {/* Day cells */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
             {Array.from({ length: firstDay }, (_, i) => <div key={`empty-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => {
@@ -139,33 +167,20 @@ export default function ChoreTracker() {
               const sel = selectedDay === day;
               return (
                 <div key={day} className="day-cell" onClick={() => setSelectedDay(sel ? null : day)}
-                  style={{
-                    borderRadius: 12,
-                    padding: "8px 4px",
-                    minHeight: 70,
-                    background: sel ? "rgba(167,139,250,0.2)" : isToday(day) ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)",
-                    border: `1.5px solid ${sel ? "#a78bfa" : isToday(day) ? "rgba(167,139,250,0.5)" : "rgba(255,255,255,0.07)"}`,
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                    position: "relative",
-                  }}>
+                  style={{ borderRadius: 12, padding: "8px 4px", minHeight: 70, background: sel ? "rgba(167,139,250,0.2)" : isToday(day) ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${sel ? "#a78bfa" : isToday(day) ? "rgba(167,139,250,0.5)" : "rgba(255,255,255,0.07)"}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative" }}>
                   <div style={{ fontSize: 13, fontWeight: isToday(day) ? 700 : 400, fontFamily: "'DM Sans', sans-serif", color: isToday(day) ? "#a78bfa" : "#fff" }}>
                     {day}
                     {isToday(day) && <span style={{ position: "absolute", top: 4, right: 6, width: 6, height: 6, borderRadius: "50%", background: "#a78bfa", display: "block" }} />}
                   </div>
-                  {/* Mini dots for active chores */}
                   {activeChores.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center", maxWidth: 48 }}>
                       {activeChores.map(id => {
                         const chore = CHORES.find(c => c.id === id);
                         const done = completed[`${year}-${month}-${day}-${id}`];
-                        return (
-                          <div key={id} title={chore.name}
-                            style={{ width: 8, height: 8, borderRadius: "50%", background: done ? chore.color : "rgba(255,255,255,0.15)", border: `1px solid ${done ? chore.color : "rgba(255,255,255,0.2)"}`, transition: "all 0.2s" }} />
-                        );
+                        return <div key={id} title={chore.name} style={{ width: 8, height: 8, borderRadius: "50%", background: done ? chore.color : "rgba(255,255,255,0.15)", border: `1px solid ${done ? chore.color : "rgba(255,255,255,0.2)"}`, transition: "all 0.2s" }} />;
                       })}
                     </div>
                   )}
-                  {/* Progress mini bar */}
                   {total > 0 && (
                     <div style={{ width: "80%", height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 99, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${pct * 100}%`, background: allDone ? "#4ECDC4" : "linear-gradient(90deg, #a78bfa, #60a5fa)", borderRadius: 99, transition: "width 0.3s" }} />
@@ -196,14 +211,7 @@ export default function ChoreTracker() {
                   const done = !!completed[`${year}-${month}-${selectedDay}-${id}`];
                   return (
                     <button key={id} onClick={() => toggleChore(selectedDay, id)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 14,
-                        background: done ? `${chore.color}28` : "rgba(255,255,255,0.05)",
-                        border: `2px solid ${done ? chore.color : "rgba(255,255,255,0.12)"}`,
-                        color: done ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer",
-                        transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500,
-                        textAlign: "left",
-                      }}>
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 14, background: done ? `${chore.color}28` : "rgba(255,255,255,0.05)", border: `2px solid ${done ? chore.color : "rgba(255,255,255,0.12)"}`, color: done ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, textAlign: "left" }}>
                       <span style={{ fontSize: 22 }}>{chore.icon}</span>
                       <span style={{ flex: 1 }}>{chore.name}</span>
                       <span style={{ fontSize: 16 }}>{done ? "✓" : "○"}</span>
