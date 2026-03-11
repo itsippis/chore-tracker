@@ -196,6 +196,14 @@ useEffect(() => {
   };
 }, [startListener]);
 
+// Kick user out if they've been removed from the shared users list
+useEffect(() => {
+  if (!currentUser || !sharedData) return;
+  if (sharedData.users && !sharedData.users[currentUser.id]) {
+    setCurrentUser(null);
+  }
+}, [sharedData, currentUser]);
+
   const chores = sharedData?.chores || DEFAULT_CHORES;
 
   const handleSetup = () => {
