@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAIoQn4EnrEva2Hv9BQJsFadl9eqkbO-hY",
-  authDomain: "chore-tracker-1d7ee.firebaseapp.com",
-  projectId: "chore-tracker-1d7ee",
-  storageBucket: "chore-tracker-1d7ee.firebasestorage.app",
-  messagingSenderId: "430363178653",
-  appId: "1:430363178653:web:43ffd66fb5aa93f8d5c674",
-  measurementId: "G-SN0DT427B6"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
