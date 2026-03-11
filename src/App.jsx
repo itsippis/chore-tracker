@@ -305,38 +305,47 @@ useEffect(() => {
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap'); * { box-sizing: border-box; } input { outline: none; }.user-pill .remove-user-btn { opacity: 0; transition: opacity 0.15s; }
-                .user-pill:hover .remove-user-btn { opacity: 1; }@media (max-width: 639px) { .user-pill .remove-user-btn { opacity: 1 !important; }`}</style>
-        <div style={{ background: "#fff", borderRadius: 24, padding: isMobile ? "32px 24px" : "40px 36px", maxWidth: 380, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.10)", border: `1px solid ${T.cardBorder}`, textAlign: "center" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap'); * { box-sizing: border-box; } input { outline: none; } .rejoin-btn { transition: all 0.2s; } .rejoin-btn:hover { transform: scale(1.03); }`}</style>
+        <div style={{ background: "#fff", borderRadius: 24, padding: isMobile ? "32px 24px" : "40px 36px", maxWidth: 400, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.10)", border: `1px solid ${T.cardBorder}`, textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 10 }}>🧹</div>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, margin: "0 0 8px", color: T.text }}>Welcome</h2>
           <p style={{ fontFamily: "'DM Sans', sans-serif", color: T.textMuted, fontSize: 14, marginBottom: 24 }}>Enter your name to track chores with your household.</p>
+
           <input value={setupName} onChange={e => { setSetupName(e.target.value); setSetupError(""); }} onKeyDown={e => e.key === "Enter" && handleSetup()} placeholder="Your name" maxLength={20}
             style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: `1.5px solid ${setupError ? "#ef4444" : T.cardBorder}`, fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: T.text, marginBottom: 8, background: "#f8fafc" }} />
           {setupError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 8 }}>{setupError}</div>}
-          <button onClick={handleSetup} style={{ width: "100%", padding: "13px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>Join Tracker</button>
-          {Object.keys(allUsers).length > 0 && (
-  <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.cardBorder}` }}>
-    <div style={{ fontSize: 12, color: T.textMuted, fontFamily: "'DM Sans', sans-serif", marginBottom: 10 }}>Return as</div>
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-      {Object.entries(allUsers).map(([id, u]) => (
-        <button key={id} onClick={() => rejoinUser(id, u)}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: T.dayBg, borderRadius: 99, padding: "6px 12px", border: `1.5px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = u.color; e.currentTarget.style.background = `${u.color}18`; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = T.cardBorder; e.currentTarget.style.background = T.dayBg; }}>
-          <Avatar name={u.name} color={u.color} size={20} />
-          <span>{u.name}</span>
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+          <button onClick={handleSetup} style={{ width: "100%", padding: "13px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
+            Join as New User
+          </button>
+
+          {/* Existing users */}
+          <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.cardBorder}` }}>
+            <div style={{ fontSize: 12, color: T.textMuted, fontFamily: "'DM Sans', sans-serif", marginBottom: 10 }}>
+              {loading ? "Loading household…" : Object.keys(allUsers).length > 0 ? "Return as" : "No other users yet"}
+            </div>
+            {loading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "8px 0" }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${T.cardBorder}`, borderTopColor: T.accent, animation: "spin 0.8s linear infinite" }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                {Object.entries(allUsers).map(([id, u]) => (
+                  <button key={id} className="rejoin-btn" onClick={() => rejoinUser(id, u)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: T.dayBg, borderRadius: 99, padding: "7px 14px", border: `1.5px solid ${T.cardBorder}`, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text }}>
+                    <Avatar name={u.name} color={u.color} size={20} />
+                    <span>{u.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  if (loading) return <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontFamily: "'DM Sans', sans-serif", color: T.textMuted }}>Loading…</div></div>;
+  //if (loading) return <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontFamily: "'DM Sans', sans-serif", color: T.textMuted }}>Loading…</div></div>;
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Georgia', serif", padding: isMobile ? "16px 12px" : "24px 16px", color: T.text }}>
