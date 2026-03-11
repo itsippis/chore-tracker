@@ -613,6 +613,11 @@ export default function ChoreTracker() {
               {(!isMobile || chores.length <= 6) && <span>{c.name}</span>}
             </button>
           ))}
+          <button className="chore-tag" onClick={() => setShowManage(true)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: isMobile ? "5px 10px" : "6px 14px", borderRadius: 99, border: `2px dashed ${T.accent}`, background: "transparent", color: T.accent, fontSize: isMobile ? 12 : 13, fontFamily: "'DM Sans',sans-serif", cursor: "pointer" }}>
+            <span style={{ fontSize: isMobile ? 13 : 15, lineHeight: 1 }}>＋</span>
+            {(!isMobile || chores.length <= 6) && <span>Add Chore</span>}
+          </button>
           <button className="manage-btn" onClick={() => setShowManage(true)}>✏️{!isMobile && " Manage"}</button>
         </div>
 
