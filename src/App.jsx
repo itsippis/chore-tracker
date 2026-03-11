@@ -157,9 +157,11 @@ const saveShared = useCallback(async (data) => {
 }, []);
 
 // Initial load + real-time listener
-useEffect(() => {
-  setLoading(true);
-  const unsub = onSnapshot(DOC, (snap) => {
+const unsubRef = useRef(null);
+
+const startListener = useCallback(() => {
+  if (unsubRef.current) unsubRef.current();
+  unsubRef.current = onSnapshot(DOC, (snap) => {
     if (isSaving.current) return;
     if (snap.exists()) {
       try { setSharedData(JSON.parse(snap.data().data)); }
@@ -170,9 +172,29 @@ useEffect(() => {
     setLastSync(Date.now());
     setLoading(false);
   });
-  return () => unsub();
 }, []);
-//  useEffect(() => { const i = setInterval(loadShared, 8000); return () => clearInterval(i); }, [loadShared]);
+
+// Initial listener
+useEffect(() => {
+  setLoading(true);
+  startListener();
+  return () => { if (unsubRef.current) unsubRef.current(); };
+}, []);
+
+// Re-attach listener when tab becomes visible or window regains focus
+useEffect(() => {
+  const handleVisibility = () => {
+    if (document.visibilityState === "visible") startListener();
+  };
+  const handleFocus = () => startListener();
+
+  document.addEventListener("visibilitychange", handleVisibility);
+  window.addEventListener("focus", handleFocus);
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibility);
+    window.removeEventListener("focus", handleFocus);
+  };
+}, [startListener]);
 
   const chores = sharedData?.chores || DEFAULT_CHORES;
 
