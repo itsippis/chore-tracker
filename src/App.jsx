@@ -218,9 +218,11 @@ useEffect(() => {
     setSharedData(updated); saveShared(updated);
   };
 
-  const rejoinUser = (id, u) => {
+const rejoinUser = (id, u) => {
     const user = { id, name: u.name, color: u.color };
-    setCurrentUser(user);
+    // Force re-render even if same user by clearing first
+    setCurrentUser(null);
+    setTimeout(() => setCurrentUser(user), 0);
   };
 
   const addChore = async () => {
@@ -331,12 +333,12 @@ useEffect(() => {
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
                 {Object.entries(allUsers).map(([id, u]) => (
-                  <button key={id} className="rejoin-btn" onClick={() => rejoinUser(id, u)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: T.dayBg, borderRadius: 99, padding: "7px 14px", border: `1.5px solid ${T.cardBorder}`, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text }}>
-                    <Avatar name={u.name} color={u.color} size={20} />
-                    <span>{u.name}</span>
-                  </button>
-                ))}
+  <button key={id} className="rejoin-btn" onClick={() => rejoinUser(id, u)}
+    style={{ display: "flex", alignItems: "center", gap: 6, background: T.dayBg, borderRadius: 99, padding: "7px 14px", border: `1.5px solid ${u.color}33`, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text, position: "relative" }}>
+    <Avatar name={u.name} color={u.color} size={20} />
+    <span>{u.name}</span>
+  </button>
+))}
               </div>
             )}
           </div>
@@ -386,7 +388,7 @@ useEffect(() => {
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 99, padding: "5px 12px", border: `1px solid ${T.cardBorder}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <Avatar name={currentUser.name} color={currentUser.color} size={20} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text, fontWeight: 500 }}>{currentUser.name}</span>
-              <button onClick={() => setCurrentUser(null)} title="Switch user" style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: 13, padding: "0 0 0 4px" }}>⇄</button>
+              <button onClick={() => { setCurrentUser(null); }} title="Switch user" style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: 13, padding: "0 0 0 4px" }}>⇄</button>
             </div>
             {Object.entries(allUsers).filter(([id]) => id !== currentUser.id).slice(0, isMobile ? 2 : 10).map(([id, u]) => (
             <div key={id} className="user-pill" style={{ display: "flex", alignItems: "center", gap: 4, opacity: 0.6, position: "relative" }}>
