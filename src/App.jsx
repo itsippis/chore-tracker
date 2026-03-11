@@ -141,29 +141,32 @@ export default function ChoreTracker() {
   const [setupName, setSetupName] = useState("");
   const [setupError, setSetupError] = useState("");
 
-const isSaving = useRef(false);
+  const isSaving = useRef(false);
 
 const loadShared = useCallback(async () => {
   if (isSaving.current) return;
   try {
-    const result = await window.storage.get("chore-shared", true);
-    if (result) setSharedData(JSON.parse(result.value));
+    const raw = localStorage.getItem("chore-shared");
+    if (raw) setSharedData(JSON.parse(raw));
     else setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 });
     setLastSync(Date.now());
-  } catch { setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 }); }
-  finally { setLoading(false); }
+  } catch {
+    setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 });
+  } finally { setLoading(false); }
 }, []);
 
 const saveShared = useCallback(async (data) => {
-    isSaving.current = true;
-    setSyncing(true);
-    try { await window.storage.set("chore-shared", JSON.stringify(data), true); setLastSync(Date.now()); }
-    catch (e) { console.error(e); }
-    finally { setSyncing(false); isSaving.current = false; }
-  }, []);
+  isSaving.current = true;
+  setSyncing(true);
+  try {
+    localStorage.setItem("chore-shared", JSON.stringify(data));
+    setLastSync(Date.now());
+  } catch (e) { console.error(e); }
+  finally { setSyncing(false); isSaving.current = false; }
+}, []);
 
   useEffect(() => { loadShared(); }, [loadShared]);
-  useEffect(() => { const i = setInterval(loadShared, 8000); return () => clearInterval(i); }, [loadShared]);
+//  useEffect(() => { const i = setInterval(loadShared, 8000); return () => clearInterval(i); }, [loadShared]);
 
   const chores = sharedData?.chores || DEFAULT_CHORES;
 
@@ -333,7 +336,7 @@ const saveShared = useCallback(async (data) => {
 
           {/* Sync */}
           <div style={{ marginTop: 5, fontSize: 11, color: T.textMuted, fontFamily: "'DM Sans', sans-serif" }}>
-            {syncing ? "⏳ Saving…" : lastSync ? `✓ Synced ${new Date(lastSync).toLocaleTimeString()}` : ""}
+            {syncing ? "⏳ Saving…" : lastSync ? `💾 Saved ${new Date(lastSync).toLocaleTimeString()}` : ""}
           </div>
 
           {/* Progress bar */}
