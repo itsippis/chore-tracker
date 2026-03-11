@@ -221,6 +221,14 @@ useEffect(() => {
     setActiveChores(prev => prev.filter(id => id !== choreId));
   };
 
+  const removeUser = async (userId) => {
+  const updatedUsers = { ...sharedData.users };
+  delete updatedUsers[userId];
+  const updated = { ...sharedData, users: updatedUsers };
+  setSharedData(updated);
+  await saveShared(updated);
+  };
+
   const toggleChore = async (day, choreId) => {
     if (!currentUser || !sharedData) return;
     const key = `${year}-${month}-${day}-${choreId}`;
@@ -262,7 +270,8 @@ useEffect(() => {
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap'); * { box-sizing: border-box; } input { outline: none; }`}</style>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap'); * { box-sizing: border-box; } input { outline: none; }.user-pill .remove-user-btn { opacity: 0; transition: opacity 0.15s; }
+                .user-pill:hover .remove-user-btn { opacity: 1; }@media (max-width: 639px) { .user-pill .remove-user-btn { opacity: 1 !important; }`}</style>
         <div style={{ background: "#fff", borderRadius: 24, padding: isMobile ? "32px 24px" : "40px 36px", maxWidth: 380, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.10)", border: `1px solid ${T.cardBorder}`, textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 10 }}>🧹</div>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, margin: "0 0 8px", color: T.text }}>Welcome</h2>
@@ -333,11 +342,15 @@ useEffect(() => {
               <button onClick={() => setCurrentUser(null)} title="Switch user" style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: 13, padding: "0 0 0 4px" }}>⇄</button>
             </div>
             {Object.entries(allUsers).filter(([id]) => id !== currentUser.id).slice(0, isMobile ? 2 : 10).map(([id, u]) => (
-              <div key={id} style={{ display: "flex", alignItems: "center", gap: 4, opacity: 0.6 }}>
-                <Avatar name={u.name} color={u.color} size={18} />
-                {!isMobile && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: T.textMuted }}>{u.name}</span>}
-              </div>
-            ))}
+            <div key={id} className="user-pill" style={{ display: "flex", alignItems: "center", gap: 4, opacity: 0.6, position: "relative" }}>
+              <Avatar name={u.name} color={u.color} size={18} />
+              {!isMobile && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: T.textMuted }}>{u.name}</span>}
+              <button className="remove-user-btn" onClick={() => removeUser(id)} title={`Remove ${u.name}`}
+                style={{ position: "absolute", top: -6, right: -6, width: 14, height: 14, borderRadius: "50%", background: "#ef4444", border: "2px solid white", color: "#fff", fontSize: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 1 }}>
+                ✕
+              </button>
+            </div>
+          ))}
           </div>
 
           {/* Sync */}
