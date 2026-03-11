@@ -618,7 +618,7 @@ export default function ChoreTracker() {
             <span style={{ fontSize: isMobile ? 13 : 15, lineHeight: 1 }}>＋</span>
             {(!isMobile || chores.length <= 6) && <span>Add Chore</span>}
           </button>
-          <button className="manage-btn" onClick={() => setShowManage(true)}>✏️{!isMobile && " Manage"}</button>
+          
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginBottom: isMobile ? 12 : 16 }}>
