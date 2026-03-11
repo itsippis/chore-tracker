@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const DEFAULT_CHORES = [
   { id: 1, name: "Dishes", icon: "🍽️", color: "#FF6B6B" },
@@ -141,21 +142,25 @@ export default function ChoreTracker() {
   const [setupName, setSetupName] = useState("");
   const [setupError, setSetupError] = useState("");
 
-  const loadShared = useCallback(async () => {
-    try {
-      const result = await window.storage.get("chore-shared", true);
-      if (result) setSharedData(JSON.parse(result.value));
-      else setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 });
-      setLastSync(Date.now());
-    } catch { setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 }); }
-    finally { setLoading(false); }
-  }, []);
+const isSaving = useRef(false);
 
-  const saveShared = useCallback(async (data) => {
+const loadShared = useCallback(async () => {
+  if (isSaving.current) return;
+  try {
+    const result = await window.storage.get("chore-shared", true);
+    if (result) setSharedData(JSON.parse(result.value));
+    else setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 });
+    setLastSync(Date.now());
+  } catch { setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 }); }
+  finally { setLoading(false); }
+}, []);
+
+const saveShared = useCallback(async (data) => {
+    isSaving.current = true;
     setSyncing(true);
     try { await window.storage.set("chore-shared", JSON.stringify(data), true); setLastSync(Date.now()); }
     catch (e) { console.error(e); }
-    finally { setSyncing(false); }
+    finally { setSyncing(false); isSaving.current = false; }
   }, []);
 
   useEffect(() => { loadShared(); }, [loadShared]);
