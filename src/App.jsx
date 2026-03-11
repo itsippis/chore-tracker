@@ -210,6 +210,16 @@ useEffect(() => {
     const name = setupName.trim();
     if (!name) { setSetupError("Please enter a name."); return; }
     if (name.length > 20) { setSetupError("Max 20 characters."); return; }
+
+    // Check if name matches an existing user — if so, just log them in
+    const existing = Object.entries(allUsers).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      const [id, u] = existing;
+      setCurrentUser({ id, name: u.name, color: u.color });
+      return;
+    }
+
+    // Otherwise create a new user
     const id = `user-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
     const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
     const user = { id, name, color };
@@ -219,10 +229,7 @@ useEffect(() => {
   };
 
 const rejoinUser = (id, u) => {
-    const user = { id, name: u.name, color: u.color };
-    // Force re-render even if same user by clearing first
-    setCurrentUser(null);
-    setTimeout(() => setCurrentUser(user), 0);
+    setCurrentUser({ id, name: u.name, color: u.color });
   };
 
   const addChore = async () => {
@@ -316,9 +323,9 @@ const rejoinUser = (id, u) => {
           <input value={setupName} onChange={e => { setSetupName(e.target.value); setSetupError(""); }} onKeyDown={e => e.key === "Enter" && handleSetup()} placeholder="Your name" maxLength={20}
             style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: `1.5px solid ${setupError ? "#ef4444" : T.cardBorder}`, fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: T.text, marginBottom: 8, background: "#f8fafc" }} />
           {setupError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 8 }}>{setupError}</div>}
-          <button onClick={handleSetup} style={{ width: "100%", padding: "13px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
-            Join as New User
-          </button>
+         <button onClick={handleSetup} style={{ width: "100%", padding: "13px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
+  Join Tracker
+</button>
 
           {/* Existing users */}
           <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.cardBorder}` }}>
