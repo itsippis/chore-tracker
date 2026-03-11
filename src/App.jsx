@@ -218,6 +218,11 @@ useEffect(() => {
     setSharedData(updated); saveShared(updated);
   };
 
+  const rejoinUser = (id, u) => {
+    const user = { id, name: u.name, color: u.color };
+    setCurrentUser(user);
+  };
+
   const addChore = async () => {
     const name = newName.trim();
     if (!name) { setNewError("Enter a chore name."); return; }
@@ -311,18 +316,21 @@ useEffect(() => {
           {setupError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 8 }}>{setupError}</div>}
           <button onClick={handleSetup} style={{ width: "100%", padding: "13px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>Join Tracker</button>
           {Object.keys(allUsers).length > 0 && (
-            <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.cardBorder}` }}>
-              <div style={{ fontSize: 12, color: T.textMuted, fontFamily: "'DM Sans', sans-serif", marginBottom: 10 }}>Already tracking</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                {Object.values(allUsers).map((u, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: T.dayBg, borderRadius: 99, padding: "4px 10px", border: `1px solid ${T.cardBorder}` }}>
-                    <Avatar name={u.name} color={u.color} size={18} />
-                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text }}>{u.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+  <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${T.cardBorder}` }}>
+    <div style={{ fontSize: 12, color: T.textMuted, fontFamily: "'DM Sans', sans-serif", marginBottom: 10 }}>Return as</div>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+      {Object.entries(allUsers).map(([id, u]) => (
+        <button key={id} onClick={() => rejoinUser(id, u)}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: T.dayBg, borderRadius: 99, padding: "6px 12px", border: `1.5px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = u.color; e.currentTarget.style.background = `${u.color}18`; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = T.cardBorder; e.currentTarget.style.background = T.dayBg; }}>
+          <Avatar name={u.name} color={u.color} size={20} />
+          <span>{u.name}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+)}
         </div>
       </div>
     );
