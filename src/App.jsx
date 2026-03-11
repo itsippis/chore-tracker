@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const CHORES = [
+const DEFAULT_CHORES = [
   { id: 1, name: "Dishes", icon: "🍽️", color: "#FF6B6B" },
   { id: 2, name: "Vacuum", icon: "🧹", color: "#4ECDC4" },
   { id: 3, name: "Laundry", icon: "👕", color: "#45B7D1" },
@@ -8,6 +8,9 @@ const CHORES = [
   { id: 5, name: "Mop", icon: "🪣", color: "#FFEAA7" },
   { id: 6, name: "Groceries", icon: "🛒", color: "#DDA0DD" },
 ];
+
+const CHORE_COLORS = ["#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7","#DDA0DD","#FFB347","#87CEEB","#98FB98","#F0E68C","#DEB887","#E6E6FA"];
+const CHORE_ICONS = ["🍽️","🧹","👕","🗑️","🪣","🛒","🧺","🧼","🪥","🌿","🐾","🪴","🧽","🪟","🚿","🛁","🧻","🍳","🥘","🧊"];
 
 const T = {
   bg: "linear-gradient(135deg, #f1f5f9, #e2e8f0, #f8fafc)",
@@ -23,7 +26,6 @@ const T = {
 };
 
 const USER_COLORS = ["#e05c8a","#4ECDC4","#FF6B6B","#45B7D1","#f59e0b","#6366f1","#10b981","#f97316"];
-
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
@@ -43,15 +45,22 @@ function useLocalStorage(key, init) {
 
 function Avatar({ name, color, size = 24 }) {
   return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%",
-      background: color, color: "#fff",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.4, fontWeight: 700, fontFamily: "'DM Sans', sans-serif",
-      flexShrink: 0, border: "2px solid white",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.15)"
-    }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.4, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", flexShrink: 0, border: "2px solid white", boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
       {name.trim().charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: 28, maxWidth: 440, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", border: `1px solid ${T.cardBorder}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h3 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: 20, color: T.text }}>{title}</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.textMuted }}>×</button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
@@ -62,55 +71,44 @@ export default function ChoreTracker() {
   const [year, setYear] = useState(today.getFullYear());
   const [activeChores, setActiveChores] = useLocalStorage("chore-active", [1, 4]);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [showManage, setShowManage] = useState(false);
 
-  // Shared state (all users)
-  const [sharedData, setSharedData] = useState(null); // { completed: {key: [userId,...]}, users: {id: {name, color}} }
+  // New chore form state
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("🧹");
+  const [newColor, setNewColor] = useState(CHORE_COLORS[0]);
+  const [newError, setNewError] = useState("");
+
+  const [sharedData, setSharedData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
-
-  // Current user (local only)
   const [currentUser, setCurrentUser] = useLocalStorage("chore-user", null);
   const [setupName, setSetupName] = useState("");
   const [setupError, setSetupError] = useState("");
 
-  // Load shared data
   const loadShared = useCallback(async () => {
     try {
       const result = await window.storage.get("chore-shared", true);
-      if (result) {
-        setSharedData(JSON.parse(result.value));
-      } else {
-        setSharedData({ completed: {}, users: {} });
-      }
+      if (result) setSharedData(JSON.parse(result.value));
+      else setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 });
       setLastSync(Date.now());
     } catch {
-      setSharedData({ completed: {}, users: {} });
-    } finally {
-      setLoading(false);
-    }
+      setSharedData({ completed: {}, users: {}, chores: DEFAULT_CHORES, nextId: DEFAULT_CHORES.length + 1 });
+    } finally { setLoading(false); }
   }, []);
 
-  // Save shared data
   const saveShared = useCallback(async (data) => {
     setSyncing(true);
-    try {
-      await window.storage.set("chore-shared", JSON.stringify(data), true);
-      setLastSync(Date.now());
-    } catch (e) {
-      console.error("Save failed", e);
-    } finally {
-      setSyncing(false);
-    }
+    try { await window.storage.set("chore-shared", JSON.stringify(data), true); setLastSync(Date.now()); }
+    catch (e) { console.error("Save failed", e); }
+    finally { setSyncing(false); }
   }, []);
 
   useEffect(() => { loadShared(); }, [loadShared]);
+  useEffect(() => { const i = setInterval(loadShared, 8000); return () => clearInterval(i); }, [loadShared]);
 
-  // Poll for updates every 8 seconds
-  useEffect(() => {
-    const interval = setInterval(loadShared, 8000);
-    return () => clearInterval(interval);
-  }, [loadShared]);
+  const chores = sharedData?.chores || DEFAULT_CHORES;
 
   const handleSetup = () => {
     const name = setupName.trim();
@@ -120,13 +118,32 @@ export default function ChoreTracker() {
     const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
     const user = { id, name, color };
     setCurrentUser(user);
-    // Register user in shared data
-    const updated = {
-      ...sharedData,
-      users: { ...(sharedData?.users || {}), [id]: { name, color } }
-    };
+    const updated = { ...sharedData, users: { ...(sharedData?.users || {}), [id]: { name, color } } };
     setSharedData(updated);
     saveShared(updated);
+  };
+
+  const addChore = async () => {
+    const name = newName.trim();
+    if (!name) { setNewError("Please enter a chore name."); return; }
+    if (chores.find(c => c.name.toLowerCase() === name.toLowerCase())) { setNewError("A chore with that name already exists."); return; }
+    const newChore = { id: sharedData.nextId || chores.length + 1, name, icon: newIcon, color: newColor };
+    const updated = {
+      ...sharedData,
+      chores: [...chores, newChore],
+      nextId: (sharedData.nextId || chores.length + 1) + 1,
+    };
+    setSharedData(updated);
+    await saveShared(updated);
+    setActiveChores(prev => [...prev, newChore.id]);
+    setNewName(""); setNewIcon("🧹"); setNewColor(CHORE_COLORS[0]); setNewError("");
+  };
+
+  const removeChore = async (choreId) => {
+    const updated = { ...sharedData, chores: chores.filter(c => c.id !== choreId) };
+    setSharedData(updated);
+    await saveShared(updated);
+    setActiveChores(prev => prev.filter(id => id !== choreId));
   };
 
   const toggleChore = async (day, choreId) => {
@@ -134,27 +151,16 @@ export default function ChoreTracker() {
     const key = `${year}-${month}-${day}-${choreId}`;
     const current = sharedData.completed[key] || [];
     const alreadyDone = current.includes(currentUser.id);
-    const updated = {
-      ...sharedData,
-      completed: {
-        ...sharedData.completed,
-        [key]: alreadyDone ? current.filter(id => id !== currentUser.id) : [...current, currentUser.id]
-      }
-    };
+    const updated = { ...sharedData, completed: { ...sharedData.completed, [key]: alreadyDone ? current.filter(id => id !== currentUser.id) : [...current, currentUser.id] } };
     setSharedData(updated);
     await saveShared(updated);
   };
 
   const getDayProgress = (day) => {
-    if (!sharedData) return { done: 0, total: activeChores.length, completedBy: {} };
-    const completedBy = {};
-    let doneCount = 0;
-    activeChores.forEach(id => {
-      const key = `${year}-${month}-${day}-${id}`;
-      const users = sharedData.completed[key] || [];
-      if (users.length > 0) { completedBy[id] = users; doneCount++; }
-    });
-    return { done: doneCount, total: activeChores.length, completedBy };
+    if (!sharedData) return { done: 0, total: activeChores.length };
+    let done = 0;
+    activeChores.forEach(id => { if ((sharedData.completed[`${year}-${month}-${day}-${id}`] || []).length > 0) done++; });
+    return { done, total: activeChores.length };
   };
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); setSelectedDay(null); };
@@ -163,6 +169,7 @@ export default function ChoreTracker() {
 
   const daysInMonth = getDaysInMonth(month, year);
   const firstDay = getFirstDay(month, year);
+  const allUsers = sharedData?.users || {};
 
   const totalDone = Array.from({length: daysInMonth}, (_,i) => i+1)
     .flatMap(day => activeChores.map(id => ((sharedData?.completed[`${year}-${month}-${day}-${id}`] || []).length > 0) ? 1 : 0))
@@ -172,17 +179,11 @@ export default function ChoreTracker() {
   const clearMonth = async () => {
     if (!sharedData) return;
     const prefix = `${year}-${month}-`;
-    const updated = {
-      ...sharedData,
-      completed: Object.fromEntries(Object.entries(sharedData.completed).filter(([k]) => !k.startsWith(prefix)))
-    };
+    const updated = { ...sharedData, completed: Object.fromEntries(Object.entries(sharedData.completed).filter(([k]) => !k.startsWith(prefix))) };
     setSharedData(updated);
     await saveShared(updated);
   };
 
-  const allUsers = sharedData?.users || {};
-
-  // Setup screen
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -191,18 +192,10 @@ export default function ChoreTracker() {
           <div style={{ fontSize: 48, marginBottom: 12 }}>🧹</div>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, margin: "0 0 8px", color: T.text }}>Welcome</h2>
           <p style={{ fontFamily: "'DM Sans', sans-serif", color: T.textMuted, fontSize: 14, marginBottom: 28 }}>Enter your name to start tracking chores with your household.</p>
-          <input
-            value={setupName}
-            onChange={e => { setSetupName(e.target.value); setSetupError(""); }}
-            onKeyDown={e => e.key === "Enter" && handleSetup()}
-            placeholder="Your name"
-            maxLength={20}
-            style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: `1.5px solid ${setupError ? "#ef4444" : T.cardBorder}`, fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: T.text, outline: "none", marginBottom: 8, background: "#f8fafc" }}
-          />
+          <input value={setupName} onChange={e => { setSetupName(e.target.value); setSetupError(""); }} onKeyDown={e => e.key === "Enter" && handleSetup()} placeholder="Your name" maxLength={20}
+            style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: `1.5px solid ${setupError ? "#ef4444" : T.cardBorder}`, fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: T.text, outline: "none", marginBottom: 8, background: "#f8fafc" }} />
           {setupError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 8 }}>{setupError}</div>}
-          <button onClick={handleSetup} style={{ width: "100%", padding: "12px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer", marginTop: 4 }}>
-            Join Tracker
-          </button>
+          <button onClick={handleSetup} style={{ width: "100%", padding: "12px", borderRadius: 12, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>Join Tracker</button>
           {Object.keys(allUsers).length > 0 && (
             <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${T.cardBorder}` }}>
               <div style={{ fontSize: 12, color: T.textMuted, fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}>Already tracking</div>
@@ -221,13 +214,7 @@ export default function ChoreTracker() {
     );
   }
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontFamily: "'DM Sans', sans-serif", color: T.textMuted, fontSize: 16 }}>Loading…</div>
-      </div>
-    );
-  }
+  if (loading) return <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontFamily: "'DM Sans', sans-serif", color: T.textMuted }}>Loading…</div></div>;
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Georgia', serif", padding: "24px 16px", color: T.text }}>
@@ -243,6 +230,11 @@ export default function ChoreTracker() {
         .progress-fill { transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
         .clear-btn { transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,100,100,0.3); background: rgba(255,100,100,0.08); color: rgba(180,60,60,0.8); border-radius: 8px; padding: 5px 12px; font-size: 12px; font-family: 'DM Sans', sans-serif; }
         .clear-btn:hover { background: rgba(255,100,100,0.15); }
+        .manage-btn { transition: all 0.2s; cursor: pointer; border: 1px solid ${T.cardBorder}; background: ${T.btnBg}; color: ${T.accent}; border-radius: 8px; padding: 5px 14px; font-size: 12px; font-family: 'DM Sans', sans-serif; }
+        .manage-btn:hover { background: rgba(71,85,105,0.2); }
+        .remove-btn { opacity: 0; transition: opacity 0.15s; cursor: pointer; background: none; border: none; color: #ef4444; font-size: 16px; padding: 2px 6px; border-radius: 6px; }
+        .chore-row:hover .remove-btn { opacity: 1; }
+        input:focus { outline: 2px solid ${T.accent}44 !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.3); border-radius: 2px; }
       `}</style>
@@ -255,13 +247,11 @@ export default function ChoreTracker() {
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2rem, 5vw, 3.5rem)", fontWeight: 900, margin: 0, background: `linear-gradient(90deg, ${T.text}, ${T.accent}, ${T.accent2})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Chore Tracker
           </h1>
-
-          {/* Current user + household */}
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 99, padding: "5px 12px", border: `1px solid ${T.cardBorder}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <Avatar name={currentUser.name} color={currentUser.color} size={22} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text, fontWeight: 500 }}>{currentUser.name}</span>
-              <button onClick={() => setCurrentUser(null)} title="Switch user" style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: 14, padding: "0 0 0 4px", lineHeight: 1 }}>⇄</button>
+              <button onClick={() => setCurrentUser(null)} title="Switch user" style={{ background: "none", border: "none", cursor: "pointer", color: T.textMuted, fontSize: 14, padding: "0 0 0 4px" }}>⇄</button>
             </div>
             {Object.entries(allUsers).filter(([id]) => id !== currentUser.id).map(([id, u]) => (
               <div key={id} style={{ display: "flex", alignItems: "center", gap: 5, opacity: 0.65 }}>
@@ -270,13 +260,9 @@ export default function ChoreTracker() {
               </div>
             ))}
           </div>
-
-          {/* Sync status */}
-          <div style={{ marginTop: 8, fontSize: 11, color: T.textMuted, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ marginTop: 6, fontSize: 11, color: T.textMuted, fontFamily: "'DM Sans', sans-serif" }}>
             {syncing ? "⏳ Saving…" : lastSync ? `✓ Synced ${new Date(lastSync).toLocaleTimeString()}` : ""}
           </div>
-
-          {/* Progress */}
           <div style={{ marginTop: 10, maxWidth: 400, margin: "10px auto 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.accent, fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>
               <span>{totalDone} completed</span><span>{totalPossible - totalDone} remaining</span>
@@ -297,26 +283,25 @@ export default function ChoreTracker() {
           <button className="nav-btn" onClick={nextMonth}>›</button>
         </div>
 
-        {/* Chore toggles */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 14 }}>
-          {CHORES.map(c => (
+        {/* Chore toggles + manage */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 10 }}>
+          {chores.map(c => (
             <button key={c.id} onClick={() => setActiveChores(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 99, border: `2px solid ${activeChores.includes(c.id) ? c.color : T.textMuted}`, background: activeChores.includes(c.id) ? `${c.color}22` : "transparent", color: activeChores.includes(c.id) ? T.text : T.textMuted, fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.2s" }}>
               <span>{c.icon}</span><span>{c.name}</span>
             </button>
           ))}
+          <button className="manage-btn" onClick={() => setShowManage(true)}>✏️ Manage</button>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
           <button className="clear-btn" onClick={clearMonth}>🗑 Clear {MONTHS[month]}</button>
         </div>
 
         {/* Calendar */}
         <div style={{ background: T.card, borderRadius: 20, padding: "20px", border: `1px solid ${T.cardBorder}` }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
-            {DAYS.map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, color: T.accent, letterSpacing: 2, padding: "4px 0", textTransform: "uppercase" }}>{d}</div>
-            ))}
+            {DAYS.map(d => <div key={d} style={{ textAlign: "center", fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, color: T.accent, letterSpacing: 2, padding: "4px 0", textTransform: "uppercase" }}>{d}</div>)}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
             {Array.from({ length: firstDay }, (_, i) => <div key={`e-${i}`} />)}
@@ -326,13 +311,8 @@ export default function ChoreTracker() {
               const pct = total ? done / total : 0;
               const allDone = total > 0 && done === total;
               const sel = selectedDay === day;
-
-              // Collect unique user avatars who did anything this day
               const activeUserIds = new Set();
-              activeChores.forEach(id => {
-                (sharedData?.completed[`${year}-${month}-${day}-${id}`] || []).forEach(uid => activeUserIds.add(uid));
-              });
-
+              activeChores.forEach(id => (sharedData?.completed[`${year}-${month}-${day}-${id}`] || []).forEach(uid => activeUserIds.add(uid)));
               return (
                 <div key={day} className="day-cell" onClick={() => setSelectedDay(sel ? null : day)}
                   style={{ borderRadius: 12, padding: "8px 4px 6px", minHeight: 75, background: sel ? T.selBg : isToday(day) ? T.todayBg : T.dayBg, border: `1.5px solid ${sel ? T.selBorder : isToday(day) ? T.todayBorder : T.dayBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
@@ -340,19 +320,10 @@ export default function ChoreTracker() {
                     {day}
                     {isToday(day) && <span style={{ position: "absolute", top: 4, right: 5, width: 5, height: 5, borderRadius: "50%", background: T.accent, display: "block" }} />}
                   </div>
-                  {total > 0 && (
-                    <div style={{ width: "80%", height: 3, background: T.progressBg, borderRadius: 99, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${pct * 100}%`, background: allDone ? T.choreDoneFill : T.progressFill, borderRadius: 99, transition: "width 0.3s" }} />
-                    </div>
-                  )}
-                  {/* User avatars on this day */}
+                  {total > 0 && <div style={{ width: "80%", height: 3, background: T.progressBg, borderRadius: 99, overflow: "hidden" }}><div style={{ height: "100%", width: `${pct * 100}%`, background: allDone ? T.choreDoneFill : T.progressFill, borderRadius: 99, transition: "width 0.3s" }} /></div>}
                   {activeUserIds.size > 0 && (
                     <div style={{ display: "flex", justifyContent: "center" }}>
-                      {[...activeUserIds].slice(0, 3).map((uid, idx) => {
-                        const u = allUsers[uid];
-                        if (!u) return null;
-                        return <div key={uid} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: idx }}><Avatar name={u.name} color={u.color} size={16} /></div>;
-                      })}
+                      {[...activeUserIds].slice(0, 3).map((uid, idx) => { const u = allUsers[uid]; if (!u) return null; return <div key={uid} style={{ marginLeft: idx > 0 ? -6 : 0, zIndex: idx }}><Avatar name={u.name} color={u.color} size={16} /></div>; })}
                       {activeUserIds.size > 3 && <div style={{ marginLeft: -4, width: 16, height: 16, borderRadius: "50%", background: T.accent, color: "#fff", fontSize: 8, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans',sans-serif", border: "2px solid white" }}>+{activeUserIds.size - 3}</div>}
                     </div>
                   )}
@@ -367,41 +338,27 @@ export default function ChoreTracker() {
         {selectedDay && (
           <div className="panel-slide" style={{ marginTop: 16, background: T.panelBg, borderRadius: 20, padding: "24px", border: `1px solid ${T.panelBorder}` }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: 22, color: T.text }}>
-                {MONTHS[month]} {selectedDay}{isToday(selectedDay) ? " — Today" : ""}
-              </h3>
+              <h3 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: 22, color: T.text }}>{MONTHS[month]} {selectedDay}{isToday(selectedDay) ? " — Today" : ""}</h3>
               <button onClick={() => setSelectedDay(null)} style={{ background: "none", border: "none", color: T.accent, fontSize: 20, cursor: "pointer" }}>×</button>
             </div>
-            {activeChores.length === 0 ? (
-              <p style={{ color: T.textMuted, fontFamily: "'DM Sans', sans-serif" }}>No chores selected. Toggle chores above.</p>
-            ) : (
+            {activeChores.length === 0 ? <p style={{ color: T.textMuted, fontFamily: "'DM Sans', sans-serif" }}>No chores active. Toggle chores above.</p> : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
                 {activeChores.map(id => {
-                  const chore = CHORES.find(c => c.id === id);
+                  const chore = chores.find(c => c.id === id);
+                  if (!chore) return null;
                   const choreKey = `${year}-${month}-${selectedDay}-${id}`;
                   const completedByIds = sharedData?.completed[choreKey] || [];
                   const iDid = completedByIds.includes(currentUser.id);
                   return (
                     <div key={id} style={{ borderRadius: 14, border: `2px solid ${completedByIds.length > 0 ? chore.color : T.dayBorder}`, background: completedByIds.length > 0 ? `${chore.color}18` : T.dayBg, overflow: "hidden", transition: "all 0.2s" }}>
-                      <button onClick={() => toggleChore(selectedDay, id)}
-                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", background: "transparent", border: "none", color: completedByIds.length > 0 ? T.text : T.textMuted, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, textAlign: "left" }}>
+                      <button onClick={() => toggleChore(selectedDay, id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", background: "transparent", border: "none", color: completedByIds.length > 0 ? T.text : T.textMuted, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 500, textAlign: "left" }}>
                         <span style={{ fontSize: 22 }}>{chore.icon}</span>
                         <span style={{ flex: 1 }}>{chore.name}</span>
                         <span style={{ fontSize: 15, color: iDid ? chore.color : T.textMuted }}>{iDid ? "✓" : "○"}</span>
                       </button>
-                      {/* Who completed it */}
                       {completedByIds.length > 0 && (
                         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 16px 10px", flexWrap: "wrap" }}>
-                          {completedByIds.map(uid => {
-                            const u = allUsers[uid];
-                            if (!u) return null;
-                            return (
-                              <div key={uid} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.6)", borderRadius: 99, padding: "2px 8px" }}>
-                                <Avatar name={u.name} color={u.color} size={14} />
-                                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: T.text }}>{u.name}</span>
-                              </div>
-                            );
-                          })}
+                          {completedByIds.map(uid => { const u = allUsers[uid]; if (!u) return null; return <div key={uid} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.6)", borderRadius: 99, padding: "2px 8px" }}><Avatar name={u.name} color={u.color} size={14} /><span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: T.text }}>{u.name}</span></div>; })}
                         </div>
                       )}
                     </div>
@@ -412,6 +369,68 @@ export default function ChoreTracker() {
           </div>
         )}
       </div>
+
+      {/* Manage Chores Modal */}
+      {showManage && (
+        <Modal title="Manage Chores" onClose={() => { setShowManage(false); setNewName(""); setNewError(""); }}>
+          {/* Existing chores */}
+          <div style={{ marginBottom: 20, maxHeight: 240, overflowY: "auto" }}>
+            {chores.length === 0 && <p style={{ color: T.textMuted, fontFamily: "'DM Sans', sans-serif", fontSize: 14, textAlign: "center" }}>No chores yet. Add one below.</p>}
+            {chores.map(c => (
+              <div key={c.id} className="chore-row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: `1px solid ${T.cardBorder}` }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 20 }}>{c.icon}</span>
+                <span style={{ flex: 1, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: T.text }}>{c.name}</span>
+                <button className="remove-btn" onClick={() => removeChore(c.id)} title="Remove chore">✕</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new chore */}
+          <div style={{ borderTop: `1px solid ${T.cardBorder}`, paddingTop: 16 }}>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: T.accent, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Add New Chore</div>
+
+            {/* Name */}
+            <input value={newName} onChange={e => { setNewName(e.target.value); setNewError(""); }} onKeyDown={e => e.key === "Enter" && addChore()} placeholder="Chore name" maxLength={24}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${newError ? "#ef4444" : T.cardBorder}`, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: T.text, background: "#f8fafc", marginBottom: 8 }} />
+            {newError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "'DM Sans', sans-serif", marginBottom: 8 }}>{newError}</div>}
+
+            {/* Icon picker */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: T.textMuted, marginBottom: 6 }}>Icon</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {CHORE_ICONS.map(icon => (
+                  <button key={icon} onClick={() => setNewIcon(icon)}
+                    style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${newIcon === icon ? T.accent : T.cardBorder}`, background: newIcon === icon ? T.btnBg : "transparent", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color picker */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: T.textMuted, marginBottom: 6 }}>Color</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {CHORE_COLORS.map(color => (
+                  <button key={color} onClick={() => setNewColor(color)}
+                    style={{ width: 28, height: 28, borderRadius: "50%", background: color, border: `3px solid ${newColor === color ? T.text : "transparent"}`, cursor: "pointer", boxShadow: newColor === color ? "0 0 0 1px white inset" : "none" }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Preview + Add */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 99, border: `2px solid ${newColor}`, background: `${newColor}22`, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: T.text }}>
+                <span>{newIcon}</span><span>{newName || "Preview"}</span>
+              </div>
+              <button onClick={addChore} style={{ marginLeft: "auto", padding: "8px 20px", borderRadius: 10, background: T.accent, color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                + Add
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
