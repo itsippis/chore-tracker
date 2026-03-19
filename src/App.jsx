@@ -162,8 +162,8 @@ function getFirstDay(m, y) {
   return new Date(y, m, 1).getDay();
 }
 function getWeekDates(date) {
-  const d = new Date(date);
-  const start = new Date(d);
+  const d = new Date(date),
+    start = new Date(d);
   start.setDate(d.getDate() - d.getDay());
   return Array.from({ length: 7 }, (_, i) => {
     const nd = new Date(start);
@@ -381,6 +381,10 @@ function Modal({ title, onClose, children }) {
   );
 }
 
+// ── Chore Card ────────────────────────────────────────────────────────────────
+// Receives onSaveNote(text) — an async function that persists the note.
+// Uses a local ref to prevent stale closure issues with the draft value.
+
 function ChoreCard({
   chore,
   completedBy,
@@ -394,16 +398,43 @@ function ChoreCard({
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(note);
   const [saving, setSaving] = useState(false);
+  const draftRef = useRef(draft);
+
+  // Keep ref in sync with draft state
   useEffect(() => {
-    setDraft(note);
-  }, [note]);
+    draftRef.current = draft;
+  }, [draft]);
+
+  // When note prop changes from outside (e.g. Firestore sync), update draft
+  // only if the editor is not currently open to avoid overwriting user input
+  useEffect(() => {
+    if (!expanded) {
+      setDraft(note);
+      draftRef.current = note;
+    }
+  }, [note, expanded]);
+
   const handleSave = async () => {
+    const textToSave = draftRef.current;
     setSaving(true);
-    await onSaveNote(draft);
-    setSaving(false);
+    try {
+      await onSaveNote(textToSave);
+      setExpanded(false);
+    } catch (e) {
+      console.error("Note save failed:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setDraft(note);
+    draftRef.current = note;
     setExpanded(false);
   };
+
   const done = completedBy.length > 0;
+
   return (
     <div
       style={{
@@ -414,6 +445,7 @@ function ChoreCard({
         transition: "all 0.2s",
       }}
     >
+      {/* Main row */}
       <div style={{ display: "flex", alignItems: "center" }}>
         <button
           onClick={onToggle}
@@ -459,23 +491,31 @@ function ChoreCard({
             {iDid ? "✓" : ""}
           </span>
         </button>
+        {/* Note toggle button — always visible */}
         <button
           onClick={() => setExpanded((e) => !e)}
+          title={note.trim() ? "Edit note" : "Add note"}
           style={{
             padding: "0 14px",
             background: "none",
             border: "none",
             cursor: "pointer",
-            fontSize: 14,
-            color: note.trim() ? chore.color : T.textMuted,
-            opacity: note.trim() ? 1 : 0.45,
+            fontSize: note.trim() ? 14 : 13,
+            color: note.trim() ? chore.color : T.textSub,
+            opacity: 1,
             transition: "all 0.2s",
             flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: isMobile ? 46 : 54,
           }}
         >
-          {note.trim() ? "📝" : "✎"}
+          {note.trim() ? "📝" : "✏️"}
         </button>
       </div>
+
+      {/* Who completed it */}
       {done && (
         <div
           style={{
@@ -516,52 +556,85 @@ function ChoreCard({
           })}
         </div>
       )}
+
+      {/* Note preview (collapsed) */}
       {note.trim() && !expanded && (
         <div
           onClick={() => setExpanded(true)}
           style={{
             margin: "0 14px 12px",
-            padding: "8px 12px",
-            borderRadius: 8,
-            background: T.noteBg,
-            border: `1px solid ${chore.color}33`,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: T.bgPanel,
+            border: `1px solid ${chore.color}44`,
             cursor: "pointer",
+            transition: "all 0.2s",
           }}
         >
           <div
             style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 11,
-              color: T.textMuted,
-              marginBottom: 3,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              marginBottom: 4,
             }}
           >
-            Note
+            <span style={{ fontSize: 11 }}>📝</span>
+            <span
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 10,
+                color: T.textMuted,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              Note
+            </span>
           </div>
           <div
             style={{
               fontFamily: "'DM Sans', sans-serif",
               fontSize: 13,
-              color: T.textSub,
+              color: T.text,
               whiteSpace: "pre-wrap",
+              lineHeight: 1.5,
             }}
           >
             {note}
           </div>
         </div>
       )}
+
+      {/* Note editor (expanded) */}
       {expanded && (
         <div style={{ padding: "0 14px 14px" }}>
+          <div
+            style={{
+              fontFamily: "'DM Sans',sans-serif",
+              fontSize: 11,
+              color: T.textMuted,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+              marginBottom: 6,
+            }}
+          >
+            {draft.trim() ? "Edit note" : "Add note"}
+          </div>
           <textarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add a note…"
+            onChange={(e) => {
+              setDraft(e.target.value);
+              draftRef.current = e.target.value;
+            }}
+            placeholder="Type a note for this chore…"
             rows={3}
+            autoFocus
             style={{
               width: "100%",
               padding: "10px 12px",
               borderRadius: 8,
-              border: `1.5px solid ${chore.color}44`,
+              border: `1.5px solid ${chore.color}66`,
               background: T.bgInput,
               color: T.text,
               fontFamily: "'DM Sans', sans-serif",
@@ -583,10 +656,7 @@ function ChoreCard({
             <Btn
               variant="ghost"
               style={{ fontSize: 12, padding: "5px 12px" }}
-              onClick={() => {
-                setDraft(note);
-                setExpanded(false);
-              }}
+              onClick={handleCancel}
             >
               Cancel
             </Btn>
@@ -596,8 +666,10 @@ function ChoreCard({
                 fontSize: 12,
                 padding: "5px 14px",
                 background: chore.color,
+                opacity: saving ? 0.7 : 1,
               }}
               onClick={handleSave}
+              disabled={saving}
             >
               {saving ? "Saving…" : "Save"}
             </Btn>
@@ -607,6 +679,8 @@ function ChoreCard({
     </div>
   );
 }
+
+// ── Chore Panel ───────────────────────────────────────────────────────────────
 
 function ChorePanel({
   date,
@@ -719,6 +793,8 @@ function ChorePanel({
     </div>
   );
 }
+
+// ── Month View ────────────────────────────────────────────────────────────────
 
 function MonthView({
   month,
@@ -894,7 +970,7 @@ function MonthView({
                             />
                           </div>
                         );
-                      })}{" "}
+                      })}
                     {activeUids.size > (isMobile ? 2 : 3) && (
                       <div
                         style={{
@@ -939,6 +1015,8 @@ function MonthView({
     </>
   );
 }
+
+// ── Week View ─────────────────────────────────────────────────────────────────
 
 function WeekView({
   focusDate,
@@ -1128,6 +1206,8 @@ function WeekView({
   );
 }
 
+// ── Day View ──────────────────────────────────────────────────────────────────
+
 function DayView({
   focusDate,
   chores,
@@ -1247,6 +1327,8 @@ function DayView({
     </div>
   );
 }
+
+// ── Setup Screen ──────────────────────────────────────────────────────────────
 
 function SetupScreen({
   allUsers,
@@ -1451,6 +1533,8 @@ function SetupScreen({
     </div>
   );
 }
+
+// ── Manage Chores Modal ───────────────────────────────────────────────────────
 
 function ManageModal({ chores, onClose, onAdd, onRemove }) {
   const [name, setName] = useState("");
@@ -1671,6 +1755,8 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
   );
 }
 
+// ── Main App ──────────────────────────────────────────────────────────────────
+
 export default function ChoreTracker() {
   const today = new Date();
   const isMobile = useIsMobile();
@@ -1694,7 +1780,14 @@ export default function ChoreTracker() {
 
   const isSaving = useRef(false);
   const unsubRef = useRef(null);
+  const sharedDataRef = useRef(null); // always holds latest sharedData
   const DOC = doc(db, "household", "shared");
+
+  // Wrapper that keeps ref and state in sync
+  const updateSharedData = useCallback((data) => {
+    sharedDataRef.current = data;
+    setSharedData(data);
+  }, []);
 
   const saveShared = useCallback(async (data) => {
     isSaving.current = true;
@@ -1716,9 +1809,9 @@ export default function ChoreTracker() {
       if (isSaving.current) return;
       if (snap.exists()) {
         try {
-          setSharedData(JSON.parse(snap.data().data));
+          updateSharedData(JSON.parse(snap.data().data));
         } catch {
-          setSharedData({
+          updateSharedData({
             completed: {},
             users: {},
             notes: {},
@@ -1727,7 +1820,7 @@ export default function ChoreTracker() {
           });
         }
       } else {
-        setSharedData({
+        updateSharedData({
           completed: {},
           users: {},
           notes: {},
@@ -1738,7 +1831,7 @@ export default function ChoreTracker() {
       setLastSync(Date.now());
       setLoading(false);
     });
-  }, []);
+  }, [updateSharedData]);
 
   useEffect(() => {
     setLoading(true);
@@ -1792,94 +1885,108 @@ export default function ChoreTracker() {
   };
 
   const toggleChore = async (day, m, y, choreId) => {
-    if (!currentUser || !sharedData) return;
+    const latest = sharedDataRef.current;
+    if (!currentUser || !latest) return;
     const key = `${y}-${m}-${day}-${choreId}`;
-    const cur = sharedData.completed?.[key] || [];
+    const cur = latest.completed?.[key] || [];
     const done = cur.includes(currentUser.id);
     const updated = {
-      ...sharedData,
+      ...latest,
       completed: {
-        ...sharedData.completed,
+        ...latest.completed,
         [key]: done
           ? cur.filter((id) => id !== currentUser.id)
           : [...cur, currentUser.id],
       },
     };
-    setSharedData(updated);
+    updateSharedData(updated);
     await saveShared(updated);
   };
+
+  // saveNote reads from sharedDataRef to always get the latest state,
+  // preventing stale closure overwrites that would erase the note.
   const saveNote = async (day, m, y, choreId, note) => {
-    if (!sharedData) return;
+    const latest = sharedDataRef.current;
+    if (!latest) return;
     const key = `${y}-${m}-${day}-${choreId}`;
-    const notes = { ...(sharedData.notes || {}), [key]: note };
+    const notes = { ...(latest.notes || {}), [key]: note };
     if (!note.trim()) delete notes[key];
-    const updated = { ...sharedData, notes };
-    setSharedData(updated);
+    const updated = { ...latest, notes };
+    updateSharedData(updated);
     await saveShared(updated);
   };
+
   const addChore = async (name, icon, color) => {
-    const currentChores = sharedData?.chores ?? DEFAULT_CHORES;
-    const nextId = sharedData?.nextId ?? currentChores.length + 1;
+    const latest = sharedDataRef.current;
+    const currentChores = latest?.chores ?? DEFAULT_CHORES;
+    const nextId = latest?.nextId ?? currentChores.length + 1;
     const newChore = { id: nextId, name, icon, color };
     const updated = {
-      ...sharedData,
+      ...latest,
       chores: [...currentChores, newChore],
       nextId: nextId + 1,
-      completed: sharedData?.completed ?? {},
-      users: sharedData?.users ?? {},
-      notes: sharedData?.notes ?? {},
+      completed: latest?.completed ?? {},
+      users: latest?.users ?? {},
+      notes: latest?.notes ?? {},
     };
-    setSharedData(updated);
+    updateSharedData(updated);
     await saveShared(updated);
     setActiveChores((prev) => [...prev, newChore.id]);
   };
+
   const removeChore = async (choreId) => {
-    const currentChores = sharedData?.chores ?? DEFAULT_CHORES;
+    const latest = sharedDataRef.current;
+    const currentChores = latest?.chores ?? DEFAULT_CHORES;
     const updated = {
-      ...sharedData,
+      ...latest,
       chores: currentChores.filter((c) => c.id !== choreId),
-      completed: sharedData?.completed ?? {},
-      users: sharedData?.users ?? {},
-      notes: sharedData?.notes ?? {},
+      completed: latest?.completed ?? {},
+      users: latest?.users ?? {},
+      notes: latest?.notes ?? {},
     };
-    setSharedData(updated);
+    updateSharedData(updated);
     await saveShared(updated);
     setActiveChores((prev) => prev.filter((id) => id !== choreId));
   };
+
   const removeUser = async (userId) => {
-    const updatedUsers = { ...sharedData.users };
+    const latest = sharedDataRef.current;
+    const updatedUsers = { ...latest.users };
     delete updatedUsers[userId];
-    const updated = { ...sharedData, users: updatedUsers };
-    setSharedData(updated);
+    const updated = { ...latest, users: updatedUsers };
+    updateSharedData(updated);
     await saveShared(updated);
   };
+
   const clearPeriod = async () => {
-    if (!sharedData) return;
+    const latest = sharedDataRef.current;
+    if (!latest) return;
     let keys = [];
     if (view === "month") {
-      keys = Object.keys(sharedData.completed || {}).filter((k) =>
+      keys = Object.keys(latest.completed || {}).filter((k) =>
         k.startsWith(`${year}-${month}-`),
       );
     } else if (view === "week") {
       getWeekDates(focusDate).forEach((d) => {
         keys.push(
-          ...Object.keys(sharedData.completed || {}).filter((k) =>
+          ...Object.keys(latest.completed || {}).filter((k) =>
             k.startsWith(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-`),
           ),
         );
       });
     } else {
       const d = focusDate;
-      keys = Object.keys(sharedData.completed || {}).filter((k) =>
+      keys = Object.keys(latest.completed || {}).filter((k) =>
         k.startsWith(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-`),
       );
     }
-    const newCompleted = { ...sharedData.completed };
+    const newCompleted = { ...latest.completed };
     keys.forEach((k) => delete newCompleted[k]);
-    const updated = { ...sharedData, completed: newCompleted };
-    setSharedData(updated);
+    const updated = { ...latest, completed: newCompleted };
+    updateSharedData(updated);
     await saveShared(updated);
   };
+
   const handleJoin = (name) => {
     const existing = Object.entries(allUsers).find(
       ([, u]) => u.name.toLowerCase() === name.toLowerCase(),
@@ -1894,10 +2001,10 @@ export default function ChoreTracker() {
     const user = { id, name, color };
     setCurrentUser(user);
     const updated = {
-      ...sharedData,
-      users: { ...(sharedData?.users || {}), [id]: { name, color } },
+      ...sharedDataRef.current,
+      users: { ...(sharedDataRef.current?.users || {}), [id]: { name, color } },
     };
-    setSharedData(updated);
+    updateSharedData(updated);
     saveShared(updated);
   };
   const handleRejoin = (id, u) =>
