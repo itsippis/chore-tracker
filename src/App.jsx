@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
-// ── Constants ────────────────────────────────────────────────────────────────
-
 const DEFAULT_CHORES = [
   { id: 1, name: "Dishes", icon: "🍽️", color: "#f87171" },
   { id: 2, name: "Vacuum", icon: "🧹", color: "#34d399" },
@@ -27,7 +25,6 @@ const CHORE_COLORS = [
   "#94a3b8",
   "#ffffff",
 ];
-
 const CHORE_ICONS = [
   "🍽️",
   "🧹",
@@ -50,7 +47,6 @@ const CHORE_ICONS = [
   "🥘",
   "🧊",
 ];
-
 const USER_COLORS = [
   "#f87171",
   "#fb923c",
@@ -61,7 +57,6 @@ const USER_COLORS = [
   "#a78bfa",
   "#e879f9",
 ];
-
 const MONTHS = [
   "January",
   "February",
@@ -79,44 +74,86 @@ const MONTHS = [
 const DAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-
-const T = {
-  // backgrounds
-  bg: "#08090e",
-  bgCard: "rgba(255,255,255,0.03)",
-  bgPanel: "rgba(255,255,255,0.04)",
-  bgInput: "rgba(255,255,255,0.06)",
-  bgHover: "rgba(255,255,255,0.07)",
-  bgModal: "#0f1018",
-  bgPill: "rgba(255,255,255,0.05)",
-  // borders
-  border: "rgba(255,255,255,0.07)",
-  borderAccent: "rgba(99,102,241,0.4)",
-  // text
-  text: "#f1f5f9",
-  textSub: "#94a3b8",
-  textMuted: "#475569",
-  // accent
-  accent: "#6366f1",
-  accentLight: "#818cf8",
-  accentGlow: "rgba(99,102,241,0.15)",
-  // states
-  todayBg: "rgba(99,102,241,0.12)",
-  todayBorder: "rgba(99,102,241,0.45)",
-  selBg: "rgba(99,102,241,0.18)",
-  selBorder: "#6366f1",
-  // progress
-  progressBg: "rgba(255,255,255,0.06)",
-  progressFill: "linear-gradient(90deg,#6366f1,#818cf8)",
-  doneFill: "#6366f1",
-  // danger
-  danger: "rgba(239,68,68,0.15)",
-  dangerText: "#fca5a5",
-  dangerBorder: "rgba(239,68,68,0.3)",
+const THEMES = {
+  dark: {
+    bg: "#08090e",
+    bgCard: "rgba(255,255,255,0.03)",
+    bgPanel: "rgba(255,255,255,0.04)",
+    bgInput: "rgba(255,255,255,0.06)",
+    bgHover: "rgba(255,255,255,0.07)",
+    bgModal: "#0f1018",
+    bgPill: "rgba(255,255,255,0.05)",
+    border: "rgba(255,255,255,0.07)",
+    borderAccent: "rgba(99,102,241,0.4)",
+    text: "#f1f5f9",
+    textSub: "#94a3b8",
+    textMuted: "#475569",
+    accent: "#6366f1",
+    accentLight: "#818cf8",
+    accentGlow: "rgba(99,102,241,0.15)",
+    todayBg: "rgba(99,102,241,0.12)",
+    todayBorder: "rgba(99,102,241,0.45)",
+    selBg: "rgba(99,102,241,0.18)",
+    selBorder: "#6366f1",
+    progressBg: "rgba(255,255,255,0.06)",
+    progressFill: "linear-gradient(90deg,#6366f1,#818cf8)",
+    doneFill: "#6366f1",
+    danger: "rgba(239,68,68,0.15)",
+    dangerText: "#fca5a5",
+    dangerBorder: "rgba(239,68,68,0.3)",
+    colorScheme: "dark",
+    bodyBg: "#08090e",
+    scrollThumb: "rgba(255,255,255,0.1)",
+    completedByBg: "rgba(255,255,255,0.05)",
+    noteBg: "rgba(255,255,255,0.04)",
+    rejoinHoverBg: "rgba(255,255,255,0.06)",
+    modalOverlay: "rgba(0,0,0,0.7)",
+    modalShadow: "0 -20px 60px rgba(0,0,0,0.6)",
+    setupShadow: "0 24px 80px rgba(0,0,0,0.7)",
+    removeUserBorder: "1.5px solid rgba(255,255,255,0.2)",
+    overflowBadgeBorder: "1.5px solid rgba(255,255,255,0.15)",
+  },
+  light: {
+    bg: "#f1f5f9",
+    bgCard: "rgba(255,255,255,0.85)",
+    bgPanel: "rgba(255,255,255,0.95)",
+    bgInput: "rgba(255,255,255,0.95)",
+    bgHover: "rgba(0,0,0,0.04)",
+    bgModal: "#ffffff",
+    bgPill: "rgba(0,0,0,0.04)",
+    border: "rgba(0,0,0,0.09)",
+    borderAccent: "rgba(99,102,241,0.3)",
+    text: "#0f172a",
+    textSub: "#475569",
+    textMuted: "#94a3b8",
+    accent: "#6366f1",
+    accentLight: "#4f46e5",
+    accentGlow: "rgba(99,102,241,0.1)",
+    todayBg: "rgba(99,102,241,0.08)",
+    todayBorder: "rgba(99,102,241,0.35)",
+    selBg: "rgba(99,102,241,0.1)",
+    selBorder: "#6366f1",
+    progressBg: "rgba(0,0,0,0.07)",
+    progressFill: "linear-gradient(90deg,#6366f1,#818cf8)",
+    doneFill: "#6366f1",
+    danger: "rgba(239,68,68,0.08)",
+    dangerText: "#dc2626",
+    dangerBorder: "rgba(239,68,68,0.25)",
+    colorScheme: "light",
+    bodyBg: "#f1f5f9",
+    scrollThumb: "rgba(0,0,0,0.15)",
+    completedByBg: "rgba(0,0,0,0.04)",
+    noteBg: "rgba(0,0,0,0.03)",
+    rejoinHoverBg: "rgba(0,0,0,0.05)",
+    modalOverlay: "rgba(0,0,0,0.4)",
+    modalShadow: "0 -20px 60px rgba(0,0,0,0.1)",
+    setupShadow: "0 24px 80px rgba(0,0,0,0.12)",
+    removeUserBorder: "1.5px solid rgba(255,255,255,0.6)",
+    overflowBadgeBorder: "1.5px solid rgba(255,255,255,0.5)",
+  },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+let T = THEMES.dark;
 
 function getDaysInMonth(m, y) {
   return new Date(y, m + 1, 0).getDate();
@@ -143,8 +180,6 @@ function isToday(date) {
   );
 }
 
-// ── Hooks ─────────────────────────────────────────────────────────────────────
-
 function useLocalStorage(key, init) {
   const [value, setValue] = useState(() => {
     try {
@@ -161,7 +196,6 @@ function useLocalStorage(key, init) {
   }, [key, value]);
   return [value, setValue];
 }
-
 function useIsMobile() {
   const [mobile, setMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
@@ -171,8 +205,6 @@ function useIsMobile() {
   }, []);
   return mobile;
 }
-
-// ── Primitive components ──────────────────────────────────────────────────────
 
 function Avatar({ name, color, size = 24 }) {
   return (
@@ -190,34 +222,11 @@ function Avatar({ name, color, size = 24 }) {
         fontWeight: 800,
         fontFamily: "'DM Sans', sans-serif",
         flexShrink: 0,
-        border: "1.5px solid rgba(255,255,255,0.15)",
-        boxShadow: `0 0 0 2px ${color}33`,
+        border: `1.5px solid ${color}44`,
+        boxShadow: `0 0 0 2px ${color}22`,
       }}
     >
       {name.trim().charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
-function Pill({ children, style, ...props }) {
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 99,
-        background: T.bgPill,
-        border: `1px solid ${T.border}`,
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: 12,
-        color: T.textSub,
-        ...style,
-      }}
-      {...props}
-    >
-      {children}
     </div>
   );
 }
@@ -261,7 +270,33 @@ function Btn({ children, variant = "ghost", style, ...props }) {
   );
 }
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
+function ThemeToggle({ theme, onToggle, compact = false }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: compact ? 4 : 6,
+        padding: compact ? "4px 10px" : "5px 14px",
+        borderRadius: 99,
+        border: `1px solid ${T.border}`,
+        background: T.bgPill,
+        color: T.textSub,
+        fontFamily: "'DM Sans',sans-serif",
+        fontSize: compact ? 11 : 12,
+        cursor: "pointer",
+        transition: "all 0.2s",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <span style={{ fontSize: compact ? 13 : 14 }}>
+        {theme === "dark" ? "☀️" : "🌙"}
+      </span>
+      {!compact && <span>{theme === "dark" ? "Light" : "Dark"}</span>}
+    </button>
+  );
+}
 
 function Modal({ title, onClose, children }) {
   useEffect(() => {
@@ -277,7 +312,7 @@ function Modal({ title, onClose, children }) {
         position: "fixed",
         inset: 0,
         zIndex: 300,
-        background: "rgba(0,0,0,0.7)",
+        background: T.modalOverlay,
         backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "flex-end",
@@ -296,7 +331,7 @@ function Modal({ title, onClose, children }) {
           maxWidth: 520,
           maxHeight: "90vh",
           overflowY: "auto",
-          boxShadow: "0 -20px 60px rgba(0,0,0,0.6)",
+          boxShadow: T.modalShadow,
         }}
       >
         <div
@@ -346,8 +381,6 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-// ── Chore Card ────────────────────────────────────────────────────────────────
-
 function ChoreCard({
   chore,
   completedBy,
@@ -361,20 +394,16 @@ function ChoreCard({
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(note);
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     setDraft(note);
   }, [note]);
-
   const handleSave = async () => {
     setSaving(true);
     await onSaveNote(draft);
     setSaving(false);
     setExpanded(false);
   };
-
   const done = completedBy.length > 0;
-
   return (
     <div
       style={{
@@ -447,7 +476,6 @@ function ChoreCard({
           {note.trim() ? "📝" : "✎"}
         </button>
       </div>
-
       {done && (
         <div
           style={{
@@ -467,7 +495,7 @@ function ChoreCard({
                   display: "flex",
                   alignItems: "center",
                   gap: 4,
-                  background: "rgba(255,255,255,0.05)",
+                  background: T.completedByBg,
                   borderRadius: 99,
                   padding: "2px 8px",
                   border: `1px solid ${T.border}`,
@@ -488,7 +516,6 @@ function ChoreCard({
           })}
         </div>
       )}
-
       {note.trim() && !expanded && (
         <div
           onClick={() => setExpanded(true)}
@@ -496,7 +523,7 @@ function ChoreCard({
             margin: "0 14px 12px",
             padding: "8px 12px",
             borderRadius: 8,
-            background: "rgba(255,255,255,0.04)",
+            background: T.noteBg,
             border: `1px solid ${chore.color}33`,
             cursor: "pointer",
           }}
@@ -523,7 +550,6 @@ function ChoreCard({
           </div>
         </div>
       )}
-
       {expanded && (
         <div style={{ padding: "0 14px 14px" }}>
           <textarea
@@ -582,8 +608,6 @@ function ChoreCard({
   );
 }
 
-// ── Chore Panel ───────────────────────────────────────────────────────────────
-
 function ChorePanel({
   date,
   chores,
@@ -600,7 +624,6 @@ function ChorePanel({
     month = date.getMonth(),
     year = date.getFullYear();
   const todayFlag = isToday(date);
-
   return (
     <div
       className="panel-slide"
@@ -658,7 +681,6 @@ function ChorePanel({
           ×
         </button>
       </div>
-
       {activeChores.length === 0 ? (
         <p
           style={{
@@ -698,8 +720,6 @@ function ChorePanel({
   );
 }
 
-// ── Month View ────────────────────────────────────────────────────────────────
-
 function MonthView({
   month,
   year,
@@ -716,7 +736,6 @@ function MonthView({
   const daysInMonth = getDaysInMonth(month, year);
   const firstDay = getFirstDay(month, year);
   const DAYS = isMobile ? DAYS_SHORT : DAYS_FULL;
-
   const progress = (day) => {
     let done = 0;
     activeChores.forEach((id) => {
@@ -728,7 +747,6 @@ function MonthView({
     });
     return { done, total: activeChores.length };
   };
-
   return (
     <>
       <div
@@ -739,7 +757,6 @@ function MonthView({
           border: `1px solid ${T.border}`,
         }}
       >
-        {/* Day headers */}
         <div
           style={{
             display: "grid",
@@ -766,7 +783,6 @@ function MonthView({
             </div>
           ))}
         </div>
-        {/* Day cells */}
         <div
           style={{
             display: "grid",
@@ -793,7 +809,6 @@ function MonthView({
                 sharedData?.completed?.[`${year}-${month}-${day}-${id}`] || []
               ).forEach((uid) => activeUids.add(uid)),
             );
-
             return (
               <div
                 key={day}
@@ -879,7 +894,7 @@ function MonthView({
                             />
                           </div>
                         );
-                      })}
+                      })}{" "}
                     {activeUids.size > (isMobile ? 2 : 3) && (
                       <div
                         style={{
@@ -893,7 +908,7 @@ function MonthView({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          border: "1.5px solid rgba(255,255,255,0.15)",
+                          border: T.overflowBadgeBorder,
                         }}
                       >
                         +{activeUids.size - (isMobile ? 2 : 3)}
@@ -907,7 +922,6 @@ function MonthView({
           })}
         </div>
       </div>
-
       {selectedDay && (
         <ChorePanel
           date={new Date(year, month, selectedDay)}
@@ -926,8 +940,6 @@ function MonthView({
   );
 }
 
-// ── Week View ─────────────────────────────────────────────────────────────────
-
 function WeekView({
   focusDate,
   chores,
@@ -941,7 +953,6 @@ function WeekView({
 }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const weekDates = getWeekDates(focusDate);
-
   return (
     <>
       <div
@@ -982,7 +993,6 @@ function WeekView({
                 sharedData?.completed?.[`${year}-${month}-${day}-${id}`] || []
               ).forEach((uid) => activeUids.add(uid)),
             );
-
             return (
               <div
                 key={idx}
@@ -1086,7 +1096,7 @@ function WeekView({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          border: "1.5px solid rgba(255,255,255,0.15)",
+                          border: T.overflowBadgeBorder,
                         }}
                       >
                         +{activeUids.size - 2}
@@ -1100,7 +1110,6 @@ function WeekView({
           })}
         </div>
       </div>
-
       {selectedDate && (
         <ChorePanel
           date={selectedDate}
@@ -1119,8 +1128,6 @@ function WeekView({
   );
 }
 
-// ── Day View ──────────────────────────────────────────────────────────────────
-
 function DayView({
   focusDate,
   chores,
@@ -1137,7 +1144,6 @@ function DayView({
     month = focusDate.getMonth(),
     year = focusDate.getFullYear();
   const tod = isToday(focusDate);
-
   return (
     <div
       style={{
@@ -1182,7 +1188,6 @@ function DayView({
           {MONTHS[month]} {year}
         </div>
       </div>
-
       {activeChores.length === 0 ? (
         <div style={{ textAlign: "center", padding: "24px 0" }}>
           <p
@@ -1243,13 +1248,17 @@ function DayView({
   );
 }
 
-// ── Setup Screen ──────────────────────────────────────────────────────────────
-
-function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
+function SetupScreen({
+  allUsers,
+  loading,
+  onJoin,
+  onRejoin,
+  theme,
+  onToggleTheme,
+}) {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const isMobile = useIsMobile();
-
   const handle = () => {
     const n = name.trim();
     if (!n) {
@@ -1262,7 +1271,6 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
     }
     onJoin(n);
   };
-
   return (
     <div
       style={{
@@ -1272,18 +1280,13 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
+        position: "relative",
       }}
     >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
-        * { box-sizing: border-box; }
-        input, textarea { outline: none; }
-        ::placeholder { color: ${T.textMuted}; }
-        input { color-scheme: dark; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .rejoin-btn:hover { border-color: var(--c) !important; background: rgba(255,255,255,0.06) !important; transform: translateY(-1px); }
-      `}</style>
-
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap');*{box-sizing:border-box;}input,textarea{outline:none;}::placeholder{color:${T.textMuted};}input{color-scheme:${T.colorScheme};}html,body{margin:0;padding:0;background:${T.bodyBg};}@keyframes spin{to{transform:rotate(360deg);}}.rejoin-btn:hover{border-color:var(--c)!important;background:${T.rejoinHoverBg}!important;transform:translateY(-1px);}`}</style>
+      <div style={{ position: "fixed", top: 16, right: 16, zIndex: 10 }}>
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      </div>
       <div
         style={{
           background: T.bgModal,
@@ -1291,7 +1294,7 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
           padding: isMobile ? "32px 24px" : "44px 40px",
           maxWidth: 400,
           width: "100%",
-          boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+          boxShadow: T.setupShadow,
           border: `1px solid ${T.border}`,
           textAlign: "center",
         }}
@@ -1318,7 +1321,6 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
         >
           Enter your name to track chores with your household.
         </p>
-
         <input
           value={name}
           onChange={(e) => {
@@ -1345,7 +1347,7 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
         {error && (
           <div
             style={{
-              color: "#fca5a5",
+              color: T.dangerText,
               fontSize: 12,
               fontFamily: "'DM Sans', sans-serif",
               marginBottom: 8,
@@ -1354,7 +1356,6 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
             {error}
           </div>
         )}
-
         <Btn
           variant="accent"
           onClick={handle}
@@ -1367,7 +1368,6 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
         >
           Join Tracker
         </Btn>
-
         <div
           style={{
             marginTop: 28,
@@ -1429,7 +1429,7 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
                     display: "flex",
                     alignItems: "center",
                     gap: 7,
-                    background: "rgba(255,255,255,0.03)",
+                    background: T.bgPill,
                     borderRadius: 99,
                     padding: "7px 14px",
                     border: `1.5px solid ${T.border}`,
@@ -1452,14 +1452,11 @@ function SetupScreen({ allUsers, loading, onJoin, onRejoin }) {
   );
 }
 
-// ── Manage Chores Modal ───────────────────────────────────────────────────────
-
 function ManageModal({ chores, onClose, onAdd, onRemove }) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🧹");
   const [color, setColor] = useState(CHORE_COLORS[0]);
   const [error, setError] = useState("");
-
   const handleAdd = () => {
     const n = name.trim();
     if (!n) {
@@ -1476,10 +1473,8 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
     setColor(CHORE_COLORS[0]);
     setError("");
   };
-
   return (
     <Modal title="Manage Chores" onClose={onClose}>
-      {/* Existing list */}
       <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 16 }}>
         {chores.length === 0 && (
           <p
@@ -1531,8 +1526,6 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
           </div>
         ))}
       </div>
-
-      {/* Add form */}
       <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
         <div
           style={{
@@ -1572,7 +1565,7 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
         {error && (
           <div
             style={{
-              color: "#fca5a5",
+              color: T.dangerText,
               fontSize: 12,
               fontFamily: "'DM Sans',sans-serif",
               marginBottom: 8,
@@ -1581,8 +1574,6 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
             {error}
           </div>
         )}
-
-        {/* Icon picker */}
         <div style={{ marginBottom: 12 }}>
           <div
             style={{
@@ -1617,8 +1608,6 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
             ))}
           </div>
         </div>
-
-        {/* Color picker */}
         <div style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -1644,14 +1633,13 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
                   border:
                     color === cl
                       ? `3px solid ${T.text}`
-                      : `3px solid transparent`,
+                      : "3px solid transparent",
                   boxShadow: color === cl ? `0 0 0 1px ${cl}` : "none",
                 }}
               />
             ))}
           </div>
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
@@ -1683,11 +1671,13 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
   );
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────────
-
 export default function ChoreTracker() {
   const today = new Date();
   const isMobile = useIsMobile();
+
+  const [theme, setTheme] = useLocalStorage("chore-theme", "dark");
+  T = THEMES[theme] || THEMES.dark;
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   const [view, setView] = useState("month");
   const [focusDate, setFocusDate] = useState(today);
@@ -1705,8 +1695,6 @@ export default function ChoreTracker() {
   const isSaving = useRef(false);
   const unsubRef = useRef(null);
   const DOC = doc(db, "household", "shared");
-
-  // ── Firebase ──────────────────────────────────────────────────────────────
 
   const saveShared = useCallback(async (data) => {
     isSaving.current = true;
@@ -1759,7 +1747,6 @@ export default function ChoreTracker() {
       if (unsubRef.current) unsubRef.current();
     };
   }, []);
-
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === "visible") startListener();
@@ -1772,22 +1759,16 @@ export default function ChoreTracker() {
       window.removeEventListener("focus", onFocus);
     };
   }, [startListener]);
-
-  // Kick removed users back to login
   useEffect(() => {
     if (!currentUser || !sharedData) return;
     if (sharedData.users && !sharedData.users[currentUser.id])
       setCurrentUser(null);
   }, [sharedData, currentUser]);
 
-  // ── Derived ───────────────────────────────────────────────────────────────
-
   const chores = sharedData?.chores || DEFAULT_CHORES;
   const allUsers = sharedData?.users || {};
   const month = focusDate.getMonth();
   const year = focusDate.getFullYear();
-
-  // ── Navigation ────────────────────────────────────────────────────────────
 
   const go = (dir) => {
     const d = new Date(focusDate);
@@ -1810,8 +1791,6 @@ export default function ChoreTracker() {
     return `${DAYS_FULL[focusDate.getDay()]}, ${MONTHS[month].slice(0, 3)} ${focusDate.getDate()}`;
   };
 
-  // ── Actions ───────────────────────────────────────────────────────────────
-
   const toggleChore = async (day, m, y, choreId) => {
     if (!currentUser || !sharedData) return;
     const key = `${y}-${m}-${day}-${choreId}`;
@@ -1829,7 +1808,6 @@ export default function ChoreTracker() {
     setSharedData(updated);
     await saveShared(updated);
   };
-
   const saveNote = async (day, m, y, choreId, note) => {
     if (!sharedData) return;
     const key = `${y}-${m}-${day}-${choreId}`;
@@ -1839,7 +1817,6 @@ export default function ChoreTracker() {
     setSharedData(updated);
     await saveShared(updated);
   };
-
   const addChore = async (name, icon, color) => {
     const currentChores = sharedData?.chores ?? DEFAULT_CHORES;
     const nextId = sharedData?.nextId ?? currentChores.length + 1;
@@ -1856,7 +1833,6 @@ export default function ChoreTracker() {
     await saveShared(updated);
     setActiveChores((prev) => [...prev, newChore.id]);
   };
-
   const removeChore = async (choreId) => {
     const currentChores = sharedData?.chores ?? DEFAULT_CHORES;
     const updated = {
@@ -1870,7 +1846,6 @@ export default function ChoreTracker() {
     await saveShared(updated);
     setActiveChores((prev) => prev.filter((id) => id !== choreId));
   };
-
   const removeUser = async (userId) => {
     const updatedUsers = { ...sharedData.users };
     delete updatedUsers[userId];
@@ -1878,7 +1853,6 @@ export default function ChoreTracker() {
     setSharedData(updated);
     await saveShared(updated);
   };
-
   const clearPeriod = async () => {
     if (!sharedData) return;
     let keys = [];
@@ -1906,7 +1880,6 @@ export default function ChoreTracker() {
     setSharedData(updated);
     await saveShared(updated);
   };
-
   const handleJoin = (name) => {
     const existing = Object.entries(allUsers).find(
       ([, u]) => u.name.toLowerCase() === name.toLowerCase(),
@@ -1927,11 +1900,8 @@ export default function ChoreTracker() {
     setSharedData(updated);
     saveShared(updated);
   };
-
   const handleRejoin = (id, u) =>
     setCurrentUser({ id, name: u.name, color: u.color });
-
-  // ── Progress ──────────────────────────────────────────────────────────────
 
   const { totalDone, totalPossible } = (() => {
     if (!sharedData) return { totalDone: 0, totalPossible: 0 };
@@ -1945,7 +1915,6 @@ export default function ChoreTracker() {
           ),
         )
         .reduce((a, b) => a + b, 0);
-
     if (view === "month") {
       const n = getDaysInMonth(month, year);
       const days = Array.from({ length: n }, (_, i) => [i + 1, month, year]);
@@ -1966,8 +1935,6 @@ export default function ChoreTracker() {
     };
   })();
 
-  // ── Render: setup ─────────────────────────────────────────────────────────
-
   if (!currentUser) {
     return (
       <SetupScreen
@@ -1975,11 +1942,11 @@ export default function ChoreTracker() {
         loading={loading}
         onJoin={handleJoin}
         onRejoin={handleRejoin}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
-
-  // ── Render: main ──────────────────────────────────────────────────────────
 
   return (
     <div
@@ -1988,34 +1955,22 @@ export default function ChoreTracker() {
         background: T.bg,
         color: T.text,
         padding: isMobile ? "16px 12px" : "28px 20px",
+        transition: "background 0.3s, color 0.3s",
       }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
-        * { box-sizing: border-box; }
-        input, textarea { outline: none; }
-        ::placeholder { color: ${T.textMuted}; }
-        input, textarea { color-scheme: dark; }
-        .day-cell { transition: all 0.15s ease; -webkit-tap-highlight-color: transparent; }
-        .day-cell:hover { transform: scale(1.03); z-index: 10; }
-        .day-cell:active { transform: scale(0.97); }
-        .panel-slide { animation: slideIn 0.2s ease; }
-        @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .remove-btn { opacity:0; transition:opacity 0.15s; cursor:pointer; background:none; border:none; color:#f87171; font-size:15px; padding:4px 8px; border-radius:6px; }
-        .chore-row:hover .remove-btn { opacity:1; }
-        .user-pill .remove-user-btn { opacity:0; transition:opacity 0.15s; }
-        .user-pill:hover .remove-user-btn { opacity:1; }
-        @media (max-width:639px) {
-          .remove-btn { opacity:1 !important; }
-          .user-pill .remove-user-btn { opacity:1 !important; }
-        }
-        ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-        html, body { margin: 0; padding: 0; background: #08090e; }
+        *{box-sizing:border-box;}input,textarea{outline:none;}::placeholder{color:${T.textMuted};}input,textarea{color-scheme:${T.colorScheme};}
+        html,body{margin:0;padding:0;background:${T.bodyBg};transition:background 0.3s;}
+        .day-cell{transition:all 0.15s ease;-webkit-tap-highlight-color:transparent;}.day-cell:hover{transform:scale(1.03);z-index:10;}.day-cell:active{transform:scale(0.97);}
+        .panel-slide{animation:slideIn 0.2s ease;}@keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        .remove-btn{opacity:0;transition:opacity 0.15s;cursor:pointer;background:none;border:none;color:#f87171;font-size:15px;padding:4px 8px;border-radius:6px;}.chore-row:hover .remove-btn{opacity:1;}
+        .user-pill .remove-user-btn{opacity:0;transition:opacity 0.15s;}.user-pill:hover .remove-user-btn{opacity:1;}
+        @media(max-width:639px){.remove-btn{opacity:1!important;}.user-pill .remove-user-btn{opacity:1!important;}}
+        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:${T.scrollThumb};border-radius:2px;}
       `}</style>
 
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
-        {/* ── Header ── */}
         <div style={{ textAlign: "center", marginBottom: isMobile ? 18 : 28 }}>
           <div
             style={{
@@ -2035,15 +1990,13 @@ export default function ChoreTracker() {
               fontSize: isMobile ? "1.9rem" : "clamp(2.2rem,5vw,3rem)",
               fontWeight: 900,
               margin: 0,
-              background: `linear-gradient(120deg, ${T.text} 30%, ${T.accentLight})`,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              color: T.text,
+              WebkitTextFillColor: "unset",
             }}
           >
             Chore Tracker
           </h1>
 
-          {/* Users */}
           <div
             style={{
               marginTop: 14,
@@ -2054,7 +2007,6 @@ export default function ChoreTracker() {
               flexWrap: "wrap",
             }}
           >
-            {/* Current user */}
             <div
               style={{
                 display: "flex",
@@ -2097,7 +2049,6 @@ export default function ChoreTracker() {
                 ⇄
               </button>
             </div>
-            {/* Other users */}
             {Object.entries(allUsers)
               .filter(([id]) => id !== currentUser.id)
               .slice(0, isMobile ? 3 : 8)
@@ -2136,7 +2087,7 @@ export default function ChoreTracker() {
                       height: 14,
                       borderRadius: "50%",
                       background: "#ef4444",
-                      border: "1.5px solid rgba(255,255,255,0.2)",
+                      border: T.removeUserBorder,
                       color: "#fff",
                       fontSize: 8,
                       cursor: "pointer",
@@ -2150,9 +2101,13 @@ export default function ChoreTracker() {
                   </button>
                 </div>
               ))}
+            <ThemeToggle
+              theme={theme}
+              onToggle={toggleTheme}
+              compact={isMobile}
+            />
           </div>
 
-          {/* Sync status */}
           <div
             style={{
               marginTop: 6,
@@ -2169,7 +2124,6 @@ export default function ChoreTracker() {
                 : ""}
           </div>
 
-          {/* Progress bar */}
           <div style={{ marginTop: 12, maxWidth: 340, margin: "12px auto 0" }}>
             <div
               style={{
@@ -2205,7 +2159,6 @@ export default function ChoreTracker() {
           </div>
         </div>
 
-        {/* ── View tabs ── */}
         <div
           style={{
             display: "flex",
@@ -2237,7 +2190,6 @@ export default function ChoreTracker() {
           ))}
         </div>
 
-        {/* ── Nav bar ── */}
         <div
           style={{
             display: "flex",
@@ -2314,7 +2266,6 @@ export default function ChoreTracker() {
           </button>
         </div>
 
-        {/* ── Chore toggles ── */}
         <div
           style={{
             display: "flex",
@@ -2356,7 +2307,6 @@ export default function ChoreTracker() {
               {(!isMobile || chores.length <= 6) && <span>{c.name}</span>}
             </button>
           ))}
-          {/* Add chore shortcut */}
           <button
             onClick={() => setShowManage(true)}
             style={{
@@ -2380,7 +2330,6 @@ export default function ChoreTracker() {
           </button>
         </div>
 
-        {/* ── Clear button ── */}
         <div
           style={{
             display: "flex",
@@ -2413,7 +2362,6 @@ export default function ChoreTracker() {
           </button>
         </div>
 
-        {/* ── Views ── */}
         <div style={{ display: view === "month" ? "block" : "none" }}>
           <MonthView
             month={month}
@@ -2457,7 +2405,6 @@ export default function ChoreTracker() {
         </div>
       </div>
 
-      {/* ── Manage modal ── */}
       {showManage && (
         <ManageModal
           chores={chores}
