@@ -1757,7 +1757,7 @@ function ManageModal({ chores, onClose, onAdd, onRemove }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 
-export default function ChoreTracker() {
+export function ChoreTracker() {
   const today = new Date();
   const isMobile = useIsMobile();
 

@@ -19,6 +19,10 @@ Firebase config comes from `VITE_FIREBASE_*` env vars (`API_KEY`, `AUTH_DOMAIN`,
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds with Node 22 and deploys `dist/` to GitHub Pages (https://itsippis.github.io/chore-tracker). The `npm run deploy` script (gh-pages) is a legacy manual alternative. Because the site lives at a subpath, `vite.config.js` sets `base: "/chore-tracker/"` and the PWA manifest icon paths are hard-coded with that prefix — keep them in sync if the base changes. The app is an installable PWA (`vite-plugin-pwa`, `registerType: "autoUpdate"`).
 
+## Code Style
+
+- Always use named exports; never use default exports.
+
 ## Architecture
 
 React 19 + Vite, plain JSX (no TypeScript, no router, no CSS framework). Nearly the entire app is in `src/App.jsx`: constants, helpers, all components (views, modals, setup screen), and the root `ChoreTracker` component that owns all state.
